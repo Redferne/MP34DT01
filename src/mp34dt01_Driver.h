@@ -97,7 +97,8 @@ typedef struct {
  */
 
 /* Select the interrupt preemption priority and subpriority for the IT/DMA interrupt */
-#define AUDIO_IN_IRQ_PREPRIO          0   /* Select the preemption priority level(0 is the highest) */
+//#define AUDIO_IN_IRQ_PREPRIO          0   /* Select the preemption priority level(0 is the highest) */
+#define AUDIO_IN_IRQ_PREPRIO          6   /* Select the preemption priority level(0 is the highest) */
 
 /*------------------------------------------------------------------------------
  CONFIGURATION: Audio Driver Configuration parameters
@@ -186,6 +187,7 @@ extern DMA_HandleTypeDef               hdma_dfsdmReg_FLT[];
 
 /* I2S DMA Stream Rx definitions */
 #define AUDIO_IN_DFSDM_DMA_CLK_ENABLE()                         __HAL_RCC_DMA1_CLK_ENABLE()
+#define AUDIO_IN_DFSDM_CLK_ENABLE()                             __HAL_RCC_DFSDM_CLK_ENABLE()
 
 #define AUDIO_IN_DFSDM_DMA_1st_CHANNEL                          DMA1_Channel4
 #define AUDIO_IN_DFSDM_DMA_2nd_CHANNEL                          DMA1_Channel5

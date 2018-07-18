@@ -77,17 +77,17 @@ uint8_t MP34DT01::end(void)
 
 /**
 * @brief  Starts audio recording.
-* @param  * pbuf: Buffer that will contain 1 ms of PCM for each microphone.
-Its dimension must be equal to (in uint16_t words):
-((PCM sampling frequency)/1000 * Channels). It is used in circular mode.
-* @param audio_complete : callback called as soon as half of the transfer has
+* @param  * pbuf: Buffer that will store PCM for each microphone.
+* Its dimension must be equal to (in uint16_t words)
+*
+* @param audio_complete : callback called as soon as (half of the) transfer has
 * been done
 * @retval AUDIO_OK in case of success, AUDIO_ERROR otherwise
 */
 uint8_t MP34DT01::record(uint16_t* pbuf, void (*audio_complete)(void))
 {
   g_audio_complete_cb = audio_complete;
-  return MP34DT01_Record(pbuf, 0);
+  return MP34DT01_Record(pbuf, 0); // Static buffer for PDM->PCM conversion
 }
 
 /**
@@ -156,9 +156,11 @@ void MP34DT01_TransferComplete_CallBack(void) {
 * @retval None
 */
 void MP34DT01_HalfTransfer_CallBack(void) {
+  #if 0
   if(g_audio_complete_cb) {
     g_audio_complete_cb();
   }
+  #endif
 }
 
 #ifdef __cplusplus

@@ -90,7 +90,8 @@ static MP34DT01_HandlerTypeDef MP34DT01_Handler;
 DFSDM_Channel_HandleTypeDef haudio_in_dfsdmchannel[4];
 DFSDM_Filter_HandleTypeDef haudio_in_dfsdmfilter[4];
 DMA_HandleTypeDef hdma_dfsdmReg_FLT[4];
-int32_t RecBuff[MAX_CH_NUMBER][MAX_SAMPLES_PER_CH * N_MS_PER_INTERRUPT];
+//int32_t RecBuff[MAX_CH_NUMBER][MAX_SAMPLES_PER_CH * N_MS_PER_INTERRUPT];
+int32_t RecBuff[1][((16000/1000)*2) * N_MS_PER_INTERRUPT];
 static uint16_t AudioInVolume = DEFAULT_AUDIO_IN_VOLUME;
 
 /**
@@ -141,8 +142,6 @@ uint8_t MP34DT01_Init(uint32_t AudioFreq, uint32_t BitRes, uint32_t ChnlNbr,
 
   MP34DT01_ClockConfig(MP34DT01_Handler.Sampling_Freq, NULL);
 
-  /* SAI data transfer preparation:
-  Prepare the Media to be used for the audio transfer from memory to SAI peripheral */
   ret = DFSDMx_Init(AudioFreq, ChnlNbr, ckout, datin);
 
   /* Return AUDIO_OK when all operations are correctly done */
@@ -364,6 +363,7 @@ static uint8_t dfsdm_enable_clock(DFSDM_Channel_TypeDef *channel_instance)
     case ((uint32_t)DFSDM1_Channel6):
     case ((uint32_t)DFSDM1_Channel7):
 #endif // DFSDM1_Channel4
+      __HAL_RCC_DFSDM_CLK_ENABLE();
       __HAL_RCC_DFSDM1_CLK_ENABLE();
       tmp = 1;
     break;
@@ -379,6 +379,7 @@ static uint8_t dfsdm_enable_clock(DFSDM_Channel_TypeDef *channel_instance)
     case ((uint32_t)DFSDM2_Channel6):
     case ((uint32_t)DFSDM2_Channel7):
 #endif // DFSDM2_Channel4
+      __HAL_RCC_DFSDM_CLK_ENABLE();
       __HAL_RCC_DFSDM2_CLK_ENABLE();
       tmp = 2;
     break;
@@ -540,7 +541,7 @@ static uint8_t DFSDMx_Init(uint32_t AudioFreq, uint32_t ChnlNbr,
   haudio_in_dfsdmchannel[0].Init.Awd.Oversampling         = 10;
   haudio_in_dfsdmchannel[0].Init.Offset                   = 0;
   haudio_in_dfsdmchannel[0].Init.RightBitShift            = shift_amount;
-  haudio_in_dfsdmchannel[0].Instance                      = dfsdm_datin;
+  haudio_in_dfsdmchannel[0].Instance                      = dfsdm_datin; // 5
 
   /* Enable DFSDM clock */
   dfsdm_enable_clock(dfsdm_datin);
@@ -599,7 +600,7 @@ static uint8_t DFSDMx_Init(uint32_t AudioFreq, uint32_t ChnlNbr,
   }
 
   /* Configure injected channel */
-  if(HAL_OK != HAL_DFSDM_FilterConfigRegChannel(&haudio_in_dfsdmfilter[0], DFSDM_CHANNEL_2, DFSDM_CONTINUOUS_CONV_ON))
+  if(HAL_OK != HAL_DFSDM_FilterConfigRegChannel(&haudio_in_dfsdmfilter[0], DFSDM_CHANNEL_5, DFSDM_CONTINUOUS_CONV_ON))
   {
     return AUDIO_ERROR;
   }
@@ -614,6 +615,7 @@ static uint8_t DFSDMx_Init(uint32_t AudioFreq, uint32_t ChnlNbr,
     haudio_in_dfsdmchannel[1].Init.Input.Multiplexer        = DFSDM_CHANNEL_EXTERNAL_INPUTS;
     haudio_in_dfsdmchannel[1].Init.Input.DataPacking        = DFSDM_CHANNEL_STANDARD_MODE;
     haudio_in_dfsdmchannel[1].Init.Input.Pins               = DFSDM_CHANNEL_FOLLOWING_CHANNEL_PINS;
+    
     haudio_in_dfsdmchannel[1].Init.SerialInterface.Type     = DFSDM_CHANNEL_SPI_FALLING;
     haudio_in_dfsdmchannel[1].Init.SerialInterface.SpiClock = DFSDM_CHANNEL_SPI_CLOCK_INTERNAL;
     haudio_in_dfsdmchannel[1].Init.Awd.FilterOrder          = DFSDM_CHANNEL_SINC1_ORDER;
@@ -784,7 +786,7 @@ static uint8_t DFSDMx_Init(uint32_t AudioFreq, uint32_t ChnlNbr,
     }
 
     /* Configure injected channel */
-    if(HAL_OK != HAL_DFSDM_FilterConfigRegChannel(&haudio_in_dfsdmfilter[3], DFSDM_CHANNEL_6, DFSDM_CONTINUOUS_CONV_ON))
+    if(HAL_OK != HAL_DFSDM_FilterConfigRegChannel(&haudio_in_dfsdmfilter[3], DFSDM_CHANNEL_3, DFSDM_CONTINUOUS_CONV_ON))
     {
       return AUDIO_ERROR;
     }
@@ -801,6 +803,9 @@ static void DFSDMx_FilterMspInit(DFSDM_Filter_HandleTypeDef *hdfsdm_filter)
 
 {
   DMA_HandleTypeDef *hdma_dfsdmReg = NULL;
+
+  /* Enable DFSDM clock */
+  AUDIO_IN_DFSDM_CLK_ENABLE();  
 
   /* Enable the DMA clock */
   AUDIO_IN_DFSDM_DMA_CLK_ENABLE() ;
@@ -862,8 +867,10 @@ static void DFSDMx_FilterMspInit(DFSDM_Filter_HandleTypeDef *hdfsdm_filter)
   /* DMA IRQ Channel configuration */
   if (hdfsdm_filter->Instance == AUDIO_IN_DFSDM_1st_FILTER)
   {
+//    HAL_NVIC_SetPriority(AUDIO_IN_DFSDM_DMA_1st_CH_IRQn, 1, AUDIO_IN_IRQ_PREPRIO);
     HAL_NVIC_SetPriority(AUDIO_IN_DFSDM_DMA_1st_CH_IRQn,
-                         1, AUDIO_IN_IRQ_PREPRIO);
+                         AUDIO_IN_IRQ_PREPRIO, 0);
+//    HAL_NVIC_SetPriority(AUDIO_IN_DFSDM_DMA_1st_CH_IRQn, AUDIO_IN_IRQ_PREPRIO, 0);
     HAL_NVIC_EnableIRQ(AUDIO_IN_DFSDM_DMA_1st_CH_IRQn);
   }
 }
@@ -895,7 +902,7 @@ static uint8_t DFSDMx_DeInit(PinName CKOUT, PinName DATIN)
   HAL_GPIO_DeInit(port, STM_GPIO_PIN(CKOUT));
 
   port = get_GPIO_Port(STM_PORT(DATIN));
-  HAL_GPIO_DeInit(port, STM_GPIO_PIN(CKOUT));
+  HAL_GPIO_DeInit(port, STM_GPIO_PIN(DATIN));
 
   return AUDIO_OK;
 }
